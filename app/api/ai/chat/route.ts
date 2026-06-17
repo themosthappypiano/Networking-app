@@ -31,7 +31,22 @@ const editableFields = [
 
 function parseJson(content: string) {
   const trimmed = content.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start >= 0 && end > start) return JSON.parse(trimmed.slice(start, end + 1));
   return JSON.parse(trimmed);
+}
+
+function messageContent(value: unknown) {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value.map((part) => {
+      if (typeof part === "string") return part;
+      if (part && typeof part === "object" && "text" in part && typeof part.text === "string") return part.text;
+      return "";
+    }).join("").trim();
+  }
+  return "";
 }
 
 function sanitizeUpdates(value: unknown, peopleIds: Set<string>) {
@@ -109,7 +124,8 @@ export async function POST(request: NextRequest) {
             role: "system",
             content: [
               "You update a private relationship CRM.",
-              "Return only valid JSON with this shape:",
+              "Return a JSON object only. Do not use markdown fences or extra prose.",
+              "Use this exact shape:",
               "{\"reply\":\"short user-facing response\",\"updates\":[{\"personId\":\"id\",\"reason\":\"why\",\"changes\":{}}]}",
               `Editable fields: ${editableFields.join(", ")}.`,
               `Valid focusArea values: ${FOCUS_AREAS.join(", ")}.`,
@@ -121,7 +137,8 @@ export async function POST(request: NextRequest) {
           { role: "user", content: `Current people JSON:\n${JSON.stringify(people)}` },
           ...messages,
         ],
-        response_format: { type: "json_object" },
+        temperature: 0.2,
+        max_tokens: 1200,
       }),
       cache: "no-store",
       signal: AbortSignal.timeout(90_000),
@@ -134,8 +151,12 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await openRouterResponse.json();
-    const content = result?.choices?.[0]?.message?.content;
-    if (typeof content !== "string") throw new Error("OpenRouter returned no message content.");
+    const message = result?.choices?.[0]?.message;
+    const content = messageContent(message?.content);
+    if (!content) {
+      console.error("OpenRouter returned an empty assistant message:", JSON.stringify(message || {}).slice(0, 1000));
+      throw new Error("OpenRouter returned an empty assistant message. Try again, or switch OPENROUTER_MODEL to another chat model.");
+    }
 
     const parsed = parseJson(content);
     const peopleIds = new Set<string>(

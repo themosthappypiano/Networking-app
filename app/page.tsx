@@ -15,11 +15,29 @@ export default function DashboardPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [query, setQuery] = useState("");
   const recentInteractions = [...interactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-  const upcoming = followUps.filter((item) => item.status !== "Done").sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 5);
+  const openFollowUps = followUps.filter((item) => item.status !== "Done");
+  const peopleWithFollowUpRecords = new Set(openFollowUps.map((item) => item.personId));
+  const upcoming = [
+    ...openFollowUps.map((item) => ({ ...item, href: `/people/${item.personId}` })),
+    ...people
+      .filter((person) => !peopleWithFollowUpRecords.has(person.id) && (person.relationshipStatus === "Needs follow-up" || person.nextFollowUpDate))
+      .map((person) => ({
+        id: `person-${person.id}`,
+        personId: person.id,
+        title: person.notes.toLowerCase().includes("follow") ? person.notes : "Follow up",
+        dueDate: person.nextFollowUpDate,
+        priority: "Medium",
+        href: `/people/${person.id}`,
+      })),
+  ].sort((a, b) => (a.dueDate || "9999-12-31").localeCompare(b.dueDate || "9999-12-31")).slice(0, 5);
   const important = [...people].sort((a, b) => b.contextLevel - a.contextLevel || b.lastInteractionDate.localeCompare(a.lastInteractionDate)).slice(0, 4);
   const matches = useMemo(() => query.trim() ? people.filter((person) => `${person.name} ${person.role} ${person.business} ${person.community} ${person.tags.join(" ")}`.toLowerCase().includes(query.toLowerCase())).slice(0, 6) : [], [people, query]);
   const recentCount = interactions.filter((item) => new Date(item.date) >= new Date(Date.now() - 30 * 864e5)).length;
-  const dueCount = followUps.filter((item) => item.status !== "Done" && isDue(item.dueDate)).length;
+  const duePeople = new Set(openFollowUps.map((item) => item.personId));
+  people.forEach((person) => {
+    if (person.relationshipStatus === "Needs follow-up" || isDue(person.nextFollowUpDate)) duePeople.add(person.id);
+  });
+  const dueCount = duePeople.size;
 
   return (
     <>
@@ -67,7 +85,7 @@ export default function DashboardPage() {
             {upcoming.map((item) => {
               const person = people.find((candidate) => candidate.id === item.personId);
               if (!person) return null;
-              return <Link href={`/people/${person.id}`} key={item.id} className="flex items-center gap-3 rounded-xl p-3 transition hover:bg-slate-50"><div className={`grid h-9 w-9 place-items-center rounded-xl ${isDue(item.dueDate) ? "bg-orange-400/10 text-orange-700" : "bg-slate-100 text-slate-500"}`}><CalendarClock size={16} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-slate-950">{item.title}</p><p className="mt-0.5 truncate text-xs text-slate-600">{person.name} · {item.priority}</p></div><span className={`text-xs ${isDue(item.dueDate) ? "text-orange-700" : "text-slate-500"}`}>{formatDate(item.dueDate, { year: undefined })}</span></Link>;
+              return <Link href={item.href} key={item.id} className="flex items-center gap-3 rounded-xl p-3 transition hover:bg-[#f2f7e8]"><div className={`grid h-9 w-9 place-items-center rounded-xl ${isDue(item.dueDate) ? "bg-orange-400/10 text-orange-700" : "bg-slate-100 text-slate-500"}`}><CalendarClock size={16} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-slate-950">{item.title}</p><p className="mt-0.5 truncate text-xs text-slate-600">{person.name} · {item.priority}</p></div><span className={`text-xs ${isDue(item.dueDate) ? "text-orange-700" : "text-slate-500"}`}>{formatDate(item.dueDate, { year: undefined })}</span></Link>;
             })}
           </div>
         </section>
