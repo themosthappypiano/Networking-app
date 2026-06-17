@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
       ? body.messages.filter((message: ChatMessage) => ["user", "assistant"].includes(message.role) && typeof message.content === "string").slice(-8)
       : [];
     const people = Array.isArray(body.people) ? body.people.slice(0, 200) : [];
+    const userStrategy = body.userStrategy && typeof body.userStrategy === "object" ? body.userStrategy : {};
     if (!messages.length) return NextResponse.json({ error: "Add a message." }, { status: 400 });
 
     const openRouterResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -124,6 +125,7 @@ export async function POST(request: NextRequest) {
             role: "system",
             content: [
               "You update a private relationship CRM.",
+              "Use the user's strategy profile when judging collaboration fit, introductions, priorities, and next actions.",
               "Return a JSON object only. Do not use markdown fences or extra prose.",
               "Use this exact shape:",
               "{\"reply\":\"short user-facing response\",\"updates\":[{\"personId\":\"id\",\"reason\":\"why\",\"changes\":{}}]}",
@@ -134,6 +136,7 @@ export async function POST(request: NextRequest) {
               "Do not invent facts. If unclear, put no updates and ask a brief clarifying question in reply.",
             ].join("\n"),
           },
+          { role: "user", content: `User strategy/profile JSON:\n${JSON.stringify(userStrategy)}` },
           { role: "user", content: `Current people JSON:\n${JSON.stringify(people)}` },
           ...messages,
         ],

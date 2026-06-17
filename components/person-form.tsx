@@ -32,7 +32,7 @@ const defaultPerson: PersonInput = {
 };
 
 export function PersonForm({ person, onDone }: { person?: Person; onDone: () => void }) {
-  const { savePerson } = useNetwork();
+  const { people, savePerson } = useNetwork();
   const router = useRouter();
   const [form, setForm] = useState<PersonInput>(person
     ? { ...person, galleryUrls: person.galleryUrls || [], context: { ...emptyContext, ...person.context } }
@@ -92,6 +92,13 @@ export function PersonForm({ person, onDone }: { person?: Person; onDone: () => 
 
   function removeGalleryPhoto(index: number) {
     update("galleryUrls", (form.galleryUrls || []).filter((_, photoIndex) => photoIndex !== index));
+  }
+
+  function toggleConnectedPerson(id: string) {
+    const connectedPeopleIds = form.connectedPeopleIds || [];
+    update("connectedPeopleIds", connectedPeopleIds.includes(id)
+      ? connectedPeopleIds.filter((connectedId) => connectedId !== id)
+      : [...connectedPeopleIds, id]);
   }
 
   async function importLinkedIn() {
@@ -254,6 +261,26 @@ export function PersonForm({ person, onDone }: { person?: Person; onDone: () => 
         <div className="mt-4 grid gap-4">
           <Field label="How we met"><textarea className="textarea" value={form.howWeMet} onChange={(e) => update("howWeMet", e.target.value)} placeholder="The origin story of this relationship..." /></Field>
         </div>
+        {person && people.filter((candidate) => candidate.id !== person.id).length > 0 && (
+          <div className="mt-4 rounded-2xl border border-line bg-slate-50 p-4">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-lime">Relationship graph</p>
+            <p className="mb-3 text-sm text-slate-500">Connect this person to other people in your network.</p>
+            <div className="grid max-h-56 gap-2 overflow-y-auto sm:grid-cols-2">
+              {people.filter((candidate) => candidate.id !== person.id).map((candidate) => {
+                const checked = (form.connectedPeopleIds || []).includes(candidate.id);
+                return (
+                  <label key={candidate.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-sm transition ${checked ? "border-lime/40 bg-lime/10 text-slate-950" : "border-line bg-[#fbfdf7] text-slate-600 hover:border-slate-300"}`}>
+                    <input type="checkbox" checked={checked} onChange={() => toggleConnectedPerson(candidate.id)} className="h-4 w-4 accent-lime" />
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">{candidate.name}</span>
+                      <span className="block truncate text-xs text-slate-500">{candidate.role || candidate.community || candidate.business || "Contact"}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <div>
