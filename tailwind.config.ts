@@ -9,12 +9,12 @@ const config: Config = {
     extend: {
       colors: {
         ink: "#f7f9fc",
-        panel: "#ffffff",
-        line: "#dce3ec",
+        panel: "#fbfdf7",
+        line: "#d5dec9",
         lime: "#65a30d",
       },
       boxShadow: {
-        glow: "0 18px 50px rgba(15, 23, 42, 0.07)",
+        glow: "0 18px 50px rgba(47, 72, 38, 0.10)",
       },
     },
   },

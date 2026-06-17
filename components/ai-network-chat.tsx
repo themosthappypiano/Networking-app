@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { Bot, Check, Loader2, Send, Sparkles } from "lucide-react";
+import { Bot, Check, Loader2, MessageCircle, Send, Sparkles, X } from "lucide-react";
 import { useNetwork } from "@/components/app-provider";
 import { supabase } from "@/lib/supabase";
 import { Person } from "@/types";
@@ -65,6 +65,7 @@ function cleanChanges(changes: Partial<Person>) {
 
 export function AiNetworkChat() {
   const { people, savePerson } = useNetwork();
+  const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", content: "Tell me what changed and I can suggest profile updates. Example: Mark Cesar as followed up and add that he wants an intro to investors." },
   ]);
@@ -148,51 +149,70 @@ export function AiNetworkChat() {
   }
 
   return (
-    <section className="card p-5 sm:p-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-lime">AI assistant</p>
-          <h2 className="text-lg font-semibold tracking-tight text-slate-950">Update people by typing</h2>
-        </div>
-        <div className="grid h-10 w-10 place-items-center rounded-xl bg-lime/10 text-lime"><Bot size={18} /></div>
-      </div>
-
-      <div className="max-h-72 space-y-2 overflow-y-auto rounded-xl border border-line bg-slate-50 p-3">
-        {messages.map((message, index) => (
-          <div key={`${message.role}-${index}`} className={`rounded-xl px-3 py-2 text-sm leading-6 ${message.role === "user" ? "ml-8 bg-lime text-white" : "mr-8 bg-white text-slate-700"}`}>
-            {message.content}
+    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+      {open && (
+        <section className="w-[calc(100vw-2.5rem)] max-w-md overflow-hidden rounded-2xl border border-lime/25 bg-[#f8fbf0] shadow-2xl">
+          <div className="flex items-center justify-between gap-3 border-b border-lime/15 bg-[#eff6df] px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-lime text-white shadow-[0_12px_30px_rgba(101,163,13,0.24)]"><Bot size={18} /></div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-lime">AI assistant</p>
+                <h2 className="text-sm font-semibold tracking-tight text-slate-950">Update people by typing</h2>
+              </div>
+            </div>
+            <button onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center rounded-full text-slate-500 transition hover:bg-white/70 hover:text-slate-950" aria-label="Close AI assistant">
+              <X size={18} />
+            </button>
           </div>
-        ))}
-        {loading && <div className="mr-8 flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-500"><Loader2 size={14} className="animate-spin" /> Thinking...</div>}
-      </div>
 
-      {pendingUpdates.length > 0 && (
-        <div className="mt-4 rounded-xl border border-lime/25 bg-lime/5 p-3">
-          <div className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-950"><Sparkles size={15} className="text-lime" /> Suggested changes</div>
-          <div className="space-y-2">
-            {pendingUpdates.map((update) => {
-              const person = peopleById.get(update.personId);
-              return (
-                <div key={update.personId} className="rounded-lg bg-white p-3 text-xs leading-5 text-slate-600">
-                  <p className="font-medium text-slate-950">{person?.name || "Unknown person"}</p>
-                  <p>{update.reason}</p>
-                  <p className="mt-1 text-slate-500">{Object.keys(cleanChanges(update.changes || {})).join(", ")}</p>
+          <div className="p-4">
+            <div className="max-h-72 space-y-2 overflow-y-auto rounded-xl border border-lime/15 bg-[#eef5e8] p-3">
+              {messages.map((message, index) => (
+                <div key={`${message.role}-${index}`} className={`rounded-xl px-3 py-2 text-sm leading-6 ${message.role === "user" ? "ml-8 bg-lime text-white" : "mr-8 bg-[#fbfdf7] text-slate-700"}`}>
+                  {message.content}
                 </div>
-              );
-            })}
+              ))}
+              {loading && <div className="mr-8 flex items-center gap-2 rounded-xl bg-[#fbfdf7] px-3 py-2 text-sm text-slate-500"><Loader2 size={14} className="animate-spin" /> Thinking...</div>}
+            </div>
+
+            {pendingUpdates.length > 0 && (
+              <div className="mt-4 rounded-xl border border-lime/25 bg-lime/5 p-3">
+                <div className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-950"><Sparkles size={15} className="text-lime" /> Suggested changes</div>
+                <div className="space-y-2">
+                  {pendingUpdates.map((update) => {
+                    const person = peopleById.get(update.personId);
+                    return (
+                      <div key={update.personId} className="rounded-lg bg-[#fbfdf7] p-3 text-xs leading-5 text-slate-600">
+                        <p className="font-medium text-slate-950">{person?.name || "Unknown person"}</p>
+                        <p>{update.reason}</p>
+                        <p className="mt-1 text-slate-500">{Object.keys(cleanChanges(update.changes || {})).join(", ")}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <button onClick={applyUpdates} disabled={applying} className="button-primary mt-3 h-9 px-3 text-xs">
+                  {applying ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                  Apply changes
+                </button>
+              </div>
+            )}
+
+            <form onSubmit={sendMessage} className="mt-4 flex gap-2">
+              <input className="input" value={input} onChange={(event) => setInput(event.target.value)} placeholder="Tell AI what to change..." />
+              <button type="submit" disabled={loading || !input.trim()} className="button-primary shrink-0 px-3" aria-label="Send message"><Send size={15} /></button>
+            </form>
+            {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
           </div>
-          <button onClick={applyUpdates} disabled={applying} className="button-primary mt-3 h-9 px-3 text-xs">
-            {applying ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-            Apply changes
-          </button>
-        </div>
+        </section>
       )}
 
-      <form onSubmit={sendMessage} className="mt-4 flex gap-2">
-        <input className="input" value={input} onChange={(event) => setInput(event.target.value)} placeholder="Tell AI what to change..." />
-        <button type="submit" disabled={loading || !input.trim()} className="button-primary shrink-0 px-3"><Send size={15} /></button>
-      </form>
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
-    </section>
+      <button
+        onClick={() => setOpen((current) => !current)}
+        className="grid h-16 w-16 place-items-center rounded-full bg-lime text-white shadow-[0_18px_42px_rgba(101,163,13,0.38)] transition hover:scale-105 hover:bg-lime/90"
+        aria-label={open ? "Close AI assistant" : "Open AI assistant"}
+      >
+        {open ? <X size={24} /> : <MessageCircle size={25} />}
+      </button>
+    </div>
   );
 }

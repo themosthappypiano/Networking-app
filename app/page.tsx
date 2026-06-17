@@ -5,7 +5,6 @@ import { ArrowRight, CalendarClock, Plus, Search, Sparkles } from "lucide-react"
 import { useMemo, useState } from "react";
 import { useNetwork } from "@/components/app-provider";
 import { DashboardStats } from "@/components/dashboard-stats";
-import { AiNetworkChat } from "@/components/ai-network-chat";
 import { Avatar, FocusBadge, Modal, SectionHeading } from "@/components/ui";
 import { PersonForm } from "@/components/person-form";
 import { formatDate, focusStyles, isDue } from "@/utils";
@@ -72,10 +71,6 @@ export default function DashboardPage() {
             })}
           </div>
         </section>
-      </div>
-
-      <div className="mt-6">
-        <AiNetworkChat />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[.85fr_1.15fr]">

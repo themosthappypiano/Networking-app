@@ -7,6 +7,7 @@ import { ReactNode, useState } from "react";
 import { cn } from "@/utils";
 import { DataControls } from "@/components/data-controls";
 import { useNetwork } from "@/components/app-provider";
+import { AiNetworkChat } from "@/components/ai-network-chat";
 
 const navigation = [
   { href: "/", label: "Command centre", icon: LayoutDashboard },
@@ -57,23 +58,24 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line/80 bg-white/90 backdrop-blur-xl lg:flex">{nav}</aside>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line/80 bg-[#f4f8ee]/95 backdrop-blur-xl lg:flex">{nav}</aside>
       {open && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm lg:hidden" onClick={() => setOpen(false)}>
-          <aside className="flex h-full w-72 flex-col border-r border-line bg-white" onClick={(e) => e.stopPropagation()}>
+          <aside className="flex h-full w-72 flex-col border-r border-line bg-[#f4f8ee]" onClick={(e) => e.stopPropagation()}>
             <button className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-lg text-slate-600" onClick={() => setOpen(false)}><X size={18} /></button>
             {nav}
           </aside>
         </div>
       )}
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-16 items-center border-b border-line/70 bg-white/85 px-4 backdrop-blur-xl sm:px-6 lg:hidden">
+        <header className="sticky top-0 z-20 flex h-16 items-center border-b border-line/70 bg-[#f4f8ee]/90 px-4 backdrop-blur-xl sm:px-6 lg:hidden">
           <button onClick={() => setOpen(true)} className="grid h-10 w-10 place-items-center rounded-xl border border-line text-slate-700"><Menu size={19} /></button>
           <Link href="/" className="ml-3 font-semibold">Network OS</Link>
           <Link href="/people" className="ml-auto grid h-10 w-10 place-items-center rounded-xl text-slate-600"><Search size={18} /></Link>
         </header>
         <main className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10">{children}</main>
       </div>
+      <AiNetworkChat />
     </div>
   );
 }
