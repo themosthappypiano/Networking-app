@@ -21,13 +21,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const nav = (
     <>
-      <div className="flex h-20 items-center gap-3 px-5">
+      <Link href="/" onClick={() => setOpen(false)} className="flex h-20 items-center gap-3 px-5 transition hover:bg-slate-50">
         <div className="grid h-10 w-10 place-items-center rounded-xl bg-lime text-white shadow-[0_10px_28px_rgba(101,163,13,0.2)]"><Network size={20} strokeWidth={2.5} /></div>
         <div>
           <p className="font-semibold tracking-tight text-slate-950">Network OS</p>
           <p className="text-[10px] uppercase tracking-[0.2em] text-slate-600">Relationship intel</p>
         </div>
-      </div>
+      </Link>
       <nav className="flex-1 space-y-1 px-3 py-5">
         <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Workspace</p>
         {navigation.map((item) => {
@@ -69,7 +69,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="lg:pl-64">
         <header className="sticky top-0 z-20 flex h-16 items-center border-b border-line/70 bg-white/85 px-4 backdrop-blur-xl sm:px-6 lg:hidden">
           <button onClick={() => setOpen(true)} className="grid h-10 w-10 place-items-center rounded-xl border border-line text-slate-700"><Menu size={19} /></button>
-          <span className="ml-3 font-semibold">Network OS</span>
+          <Link href="/" className="ml-3 font-semibold">Network OS</Link>
           <Link href="/people" className="ml-auto grid h-10 w-10 place-items-center rounded-xl text-slate-600"><Search size={18} /></Link>
         </header>
         <main className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10">{children}</main>

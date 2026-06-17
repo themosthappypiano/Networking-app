@@ -3,6 +3,7 @@
 import { Plus, UserSearch } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNetwork } from "@/components/app-provider";
+import { DataControls } from "@/components/data-controls";
 import { FilterBar, Filters, emptyFilters } from "@/components/filter-bar";
 import { PersonCard } from "@/components/person-card";
 import { EmptyState, Modal } from "@/components/ui";
@@ -38,11 +39,14 @@ export default function PeoplePage() {
     <>
       <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div><p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-lime">People database</p><h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950">Every relationship, in context.</h1><p className="mt-2 text-sm text-slate-500">{filtered.length} of {people.length} people</p></div>
-        <button onClick={() => setAddOpen(true)} className="button-primary"><Plus size={16} /> Add person</button>
+        <div className="flex flex-wrap gap-2">
+          <DataControls />
+          <button onClick={() => setAddOpen(true)} className="button-primary"><Plus size={16} /> Add person</button>
+        </div>
       </div>
       <FilterBar filters={filters} setFilters={setFilters} communities={communities} events={events} tags={tags} />
       <div className="h-5" />
-      {filtered.length ? <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-4">{filtered.map((person) => <PersonCard key={person.id} person={person} />)}</div> : <EmptyState icon={<UserSearch size={19} />} title="No people yet" body="Add a real person and upload their profile picture to begin building your visual network." action={<button onClick={() => setAddOpen(true)} className="button-primary"><Plus size={15} /> Add first person</button>} />}
+      {filtered.length ? <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-4">{filtered.map((person) => <PersonCard key={person.id} person={person} />)}</div> : <EmptyState icon={<UserSearch size={19} />} title="No people yet" body="Import your Google Contacts CSV or add a person manually to begin building your network." action={<div className="flex flex-wrap justify-center gap-2"><DataControls /><button onClick={() => setAddOpen(true)} className="button-primary"><Plus size={15} /> Add first person</button></div>} />}
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add a person" description="Capture the relationship while the context is fresh." wide><PersonForm onDone={() => setAddOpen(false)} /></Modal>
     </>
   );
