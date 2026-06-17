@@ -5,6 +5,7 @@ import { ArrowRight, CalendarClock, Plus, Search, Sparkles } from "lucide-react"
 import { useMemo, useState } from "react";
 import { useNetwork } from "@/components/app-provider";
 import { DashboardStats } from "@/components/dashboard-stats";
+import { AiNetworkChat } from "@/components/ai-network-chat";
 import { Avatar, FocusBadge, Modal, SectionHeading } from "@/components/ui";
 import { PersonForm } from "@/components/person-form";
 import { formatDate, focusStyles, isDue } from "@/utils";
@@ -52,10 +53,10 @@ export default function DashboardPage() {
               const count = people.filter((person) => person.focusArea === focus).length;
               const percentage = people.length ? Math.round((count / people.length) * 100) : 0;
               return (
-                <div key={focus} className="rounded-xl border border-line/70 bg-slate-50 p-3.5">
+                <Link key={focus} href={`/people?focus=${encodeURIComponent(focus)}`} className="rounded-xl border border-line/70 bg-slate-50 p-3.5 transition hover:border-slate-400 hover:bg-white">
                   <div className="flex items-center justify-between"><span className={`rounded-full border px-2 py-0.5 text-[11px] ${focusStyles[focus]}`}>{focus}</span><span className="text-sm font-semibold text-slate-950">{count}</span></div>
                   <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-current text-lime" style={{ width: `${Math.max(percentage, count ? 8 : 0)}%` }} /></div>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -67,10 +68,14 @@ export default function DashboardPage() {
             {upcoming.map((item) => {
               const person = people.find((candidate) => candidate.id === item.personId);
               if (!person) return null;
-              return <Link href={`/people/${person.id}`} key={item.id} className="flex items-center gap-3 rounded-xl p-3 transition hover:bg-slate-50"><div className={`grid h-9 w-9 place-items-center rounded-xl ${isDue(item.dueDate) ? "bg-orange-400/10 text-orange-700" : "bg-slate-100 text-slate-500"}`}><CalendarClock size={16} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-slate-200">{item.title}</p><p className="mt-0.5 truncate text-xs text-slate-600">{person.name} · {item.priority}</p></div><span className={`text-xs ${isDue(item.dueDate) ? "text-orange-700" : "text-slate-500"}`}>{formatDate(item.dueDate, { year: undefined })}</span></Link>;
+              return <Link href={`/people/${person.id}`} key={item.id} className="flex items-center gap-3 rounded-xl p-3 transition hover:bg-slate-50"><div className={`grid h-9 w-9 place-items-center rounded-xl ${isDue(item.dueDate) ? "bg-orange-400/10 text-orange-700" : "bg-slate-100 text-slate-500"}`}><CalendarClock size={16} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-slate-950">{item.title}</p><p className="mt-0.5 truncate text-xs text-slate-600">{person.name} · {item.priority}</p></div><span className={`text-xs ${isDue(item.dueDate) ? "text-orange-700" : "text-slate-500"}`}>{formatDate(item.dueDate, { year: undefined })}</span></Link>;
             })}
           </div>
         </section>
+      </div>
+
+      <div className="mt-6">
+        <AiNetworkChat />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[.85fr_1.15fr]">
