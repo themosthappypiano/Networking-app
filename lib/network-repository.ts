@@ -1,5 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { FollowUp, Interaction, NetworkData, NetworkEvent, Person, PersonContext } from "@/types";
+import { CommercialDocument, FollowUp, Interaction, NetworkData, NetworkEvent, Person, PersonContext } from "@/types";
 import { emptyContext } from "@/utils";
 
 const colors = [
@@ -26,6 +26,10 @@ async function imageUrls(client: SupabaseClient, values: string[] | null) {
   return Promise.all((values || []).map((value) => imageUrl(client, value)));
 }
 
+function isMissingTable(error: unknown) {
+  return Boolean(error && typeof error === "object" && "code" in error && error.code === "42P01");
+}
+
 export async function uploadDataImage(client: SupabaseClient, userId: string, bucket: "avatars" | "banners", value?: string) {
   if (!value || !value.startsWith("data:")) return value || null;
   const response = await fetch(value);
@@ -37,17 +41,21 @@ export async function uploadDataImage(client: SupabaseClient, userId: string, bu
 }
 
 export async function loadNetworkData(client: SupabaseClient): Promise<NetworkData> {
-  const [peopleResult, interactionsResult, followUpsResult, eventsResult, eventPeopleResult, connectionsResult] = await Promise.all([
+  const [peopleResult, interactionsResult, followUpsResult, eventsResult, documentsResult, eventPeopleResult, documentPeopleResult, connectionsResult] = await Promise.all([
     client.from("people").select("*").order("created_at", { ascending: false }),
     client.from("interactions").select("*").order("interaction_date", { ascending: false }),
     client.from("follow_ups").select("*").order("due_date"),
     client.from("events").select("*").order("event_date", { ascending: false }),
+    client.from("commercial_documents").select("*").order("sent_date", { ascending: false }),
     client.from("event_people").select("event_id, person_id"),
+    client.from("commercial_document_people").select("document_id, person_id"),
     client.from("person_connections").select("person_id, connected_person_id"),
   ]);
 
+  const documentError = isMissingTable(documentsResult.error) ? null : documentsResult.error;
+  const documentPeopleError = isMissingTable(documentPeopleResult.error) ? null : documentPeopleResult.error;
   const error = peopleResult.error || interactionsResult.error || followUpsResult.error
-    || eventsResult.error || eventPeopleResult.error || connectionsResult.error;
+    || eventsResult.error || documentError || eventPeopleResult.error || documentPeopleError || connectionsResult.error;
   if (error) throw error;
 
   const people = await Promise.all((peopleResult.data || []).map(async (row, index): Promise<Person> => ({
@@ -113,7 +121,22 @@ export async function loadNetworkData(client: SupabaseClient): Promise<NetworkDa
     outcomes: row.outcomes,
   }));
 
-  return { people, interactions, followUps, events };
+  const documents: CommercialDocument[] = (documentsResult.data || []).map((row) => ({
+    id: row.id,
+    type: row.type,
+    title: row.title,
+    amount: Number(row.amount || 0),
+    currency: row.currency,
+    status: row.status,
+    sentDate: row.sent_date || "",
+    dueDate: row.due_date || "",
+    personIds: (documentPeopleResult.data || []).filter((item) => item.document_id === row.id).map((item) => item.person_id),
+    tags: row.tags || [],
+    notes: row.notes,
+    link: row.link,
+  }));
+
+  return { people, interactions, followUps, events, documents };
 }
 
 export function personRow(person: Person, avatarPath?: string | null, bannerPath?: string | null, galleryPaths?: string[]) {
@@ -163,6 +186,22 @@ export function eventRow(item: NetworkEvent) {
   };
 }
 
+export function commercialDocumentRow(item: CommercialDocument) {
+  return {
+    id: item.id,
+    type: item.type,
+    title: item.title,
+    amount: item.amount,
+    currency: item.currency,
+    status: item.status,
+    sent_date: item.sentDate || null,
+    due_date: item.dueDate || null,
+    tags: item.tags,
+    notes: item.notes,
+    link: item.link,
+  };
+}
+
 export async function replaceNetworkData(client: SupabaseClient, userId: string, data: NetworkData) {
   const peopleRows = await Promise.all(data.people.map(async (person) => {
     const avatarPath = await uploadDataImage(client, userId, "avatars", person.avatarUrl);
@@ -187,6 +226,10 @@ export async function replaceNetworkData(client: SupabaseClient, userId: string,
     const { error } = await client.from("follow_ups").upsert(data.followUps.map(followUpRow));
     if (error) throw error;
   }
+  if ((data.documents || []).length) {
+    const { error } = await client.from("commercial_documents").upsert(data.documents.map(commercialDocumentRow));
+    if (error) throw error;
+  }
 
   const eventPeople = data.events.flatMap((event) => event.peopleIds.map((personId) => ({
     event_id: event.id,
@@ -194,6 +237,15 @@ export async function replaceNetworkData(client: SupabaseClient, userId: string,
   })));
   if (eventPeople.length) {
     const { error } = await client.from("event_people").upsert(eventPeople);
+    if (error) throw error;
+  }
+
+  const documentPeople = (data.documents || []).flatMap((document) => document.personIds.map((personId) => ({
+    document_id: document.id,
+    person_id: personId,
+  })));
+  if (documentPeople.length) {
+    const { error } = await client.from("commercial_document_people").upsert(documentPeople);
     if (error) throw error;
   }
 
@@ -219,6 +271,11 @@ export function remapLocalData(data: NetworkData): NetworkData {
     })),
     interactions: data.interactions.map((item) => ({ ...item, id: crypto.randomUUID(), personId: personIds.get(item.personId)! })).filter((item) => item.personId),
     followUps: data.followUps.map((item) => ({ ...item, id: crypto.randomUUID(), personId: personIds.get(item.personId)! })).filter((item) => item.personId),
+    documents: (data.documents || []).map((document) => ({
+      ...document,
+      id: crypto.randomUUID(),
+      personIds: document.personIds.map((id) => personIds.get(id)).filter(Boolean) as string[],
+    })),
     events: data.events.map((event) => ({
       ...event,
       id: eventIds.get(event.id)!,

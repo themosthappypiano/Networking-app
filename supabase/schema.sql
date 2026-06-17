@@ -86,6 +86,23 @@ create table if not exists public.events (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.commercial_documents (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  type text not null default 'Proposal' check (type in ('Invoice', 'Proposal')),
+  title text not null,
+  amount numeric(12,2) not null default 0 check (amount >= 0),
+  currency text not null default 'EUR',
+  status text not null default 'Draft' check (status in ('Draft', 'Sent', 'Viewed', 'Accepted', 'Declined', 'Paid')),
+  sent_date date,
+  due_date date,
+  tags text[] not null default '{}',
+  notes text not null default '',
+  link text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.event_people (
   owner_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   event_id uuid not null references public.events(id) on delete cascade,
@@ -101,6 +118,14 @@ create table if not exists public.person_connections (
   created_at timestamptz not null default now(),
   primary key (person_id, connected_person_id),
   check (person_id <> connected_person_id)
+);
+
+create table if not exists public.commercial_document_people (
+  owner_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  document_id uuid not null references public.commercial_documents(id) on delete cascade,
+  person_id uuid not null references public.people(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (document_id, person_id)
 );
 
 create table if not exists public.linkedin_imports (
@@ -122,6 +147,8 @@ create index if not exists people_owner_tags_idx on public.people using gin (tag
 create index if not exists interactions_person_date_idx on public.interactions (person_id, interaction_date desc);
 create index if not exists follow_ups_owner_due_idx on public.follow_ups (owner_id, due_date) where status <> 'Done';
 create index if not exists events_owner_date_idx on public.events (owner_id, event_date desc);
+create index if not exists commercial_documents_owner_sent_idx on public.commercial_documents (owner_id, sent_date desc);
+create index if not exists commercial_documents_owner_status_idx on public.commercial_documents (owner_id, status);
 
 drop trigger if exists people_set_updated_at on public.people;
 create trigger people_set_updated_at before update on public.people for each row execute function public.set_updated_at();
@@ -131,6 +158,8 @@ drop trigger if exists follow_ups_set_updated_at on public.follow_ups;
 create trigger follow_ups_set_updated_at before update on public.follow_ups for each row execute function public.set_updated_at();
 drop trigger if exists events_set_updated_at on public.events;
 create trigger events_set_updated_at before update on public.events for each row execute function public.set_updated_at();
+drop trigger if exists commercial_documents_set_updated_at on public.commercial_documents;
+create trigger commercial_documents_set_updated_at before update on public.commercial_documents for each row execute function public.set_updated_at();
 
 alter table public.people enable row level security;
 alter table public.interactions enable row level security;
@@ -138,6 +167,8 @@ alter table public.follow_ups enable row level security;
 alter table public.events enable row level security;
 alter table public.event_people enable row level security;
 alter table public.person_connections enable row level security;
+alter table public.commercial_documents enable row level security;
+alter table public.commercial_document_people enable row level security;
 alter table public.linkedin_imports enable row level security;
 
 grant usage on schema public to authenticated;
@@ -147,13 +178,15 @@ grant select, insert, update, delete on public.follow_ups to authenticated;
 grant select, insert, update, delete on public.events to authenticated;
 grant select, insert, update, delete on public.event_people to authenticated;
 grant select, insert, update, delete on public.person_connections to authenticated;
+grant select, insert, update, delete on public.commercial_documents to authenticated;
+grant select, insert, update, delete on public.commercial_document_people to authenticated;
 grant select, insert, update, delete on public.linkedin_imports to authenticated;
 
 do $$
 declare
   table_name text;
 begin
-  foreach table_name in array array['people', 'events', 'linkedin_imports']
+  foreach table_name in array array['people', 'events', 'commercial_documents', 'linkedin_imports']
   loop
     execute format('drop policy if exists "Users manage own %1$s" on public.%1$I', table_name);
     execute format(
@@ -214,6 +247,20 @@ with check (
   owner_id = (select auth.uid())
   and exists (select 1 from public.people where people.id = person_connections.person_id and people.owner_id = (select auth.uid()))
   and exists (select 1 from public.people where people.id = person_connections.connected_person_id and people.owner_id = (select auth.uid()))
+);
+
+drop policy if exists "Users manage own commercial_document_people" on public.commercial_document_people;
+create policy "Users manage own commercial_document_people"
+on public.commercial_document_people for all to authenticated
+using (
+  owner_id = (select auth.uid())
+  and exists (select 1 from public.commercial_documents where commercial_documents.id = commercial_document_people.document_id and commercial_documents.owner_id = (select auth.uid()))
+  and exists (select 1 from public.people where people.id = commercial_document_people.person_id and people.owner_id = (select auth.uid()))
+)
+with check (
+  owner_id = (select auth.uid())
+  and exists (select 1 from public.commercial_documents where commercial_documents.id = commercial_document_people.document_id and commercial_documents.owner_id = (select auth.uid()))
+  and exists (select 1 from public.people where people.id = commercial_document_people.person_id and people.owner_id = (select auth.uid()))
 );
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

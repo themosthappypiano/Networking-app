@@ -114,15 +114,15 @@ function googleContactsCsvToData(text: string): NetworkData {
   }).filter((person) => person.name || person.notes || person.business);
 
   if (!people.length) throw new Error("No contacts found.");
-  return { people, interactions: [], followUps: [], events: [] };
+  return { people, interactions: [], followUps: [], events: [], documents: [] };
 }
 
 export function DataControls({ compact = false }: { compact?: boolean }) {
-  const { people, interactions, followUps, events, importData, clearData } = useNetwork();
+  const { people, interactions, followUps, events, documents, importData, clearData } = useNetwork();
   const inputRef = useRef<HTMLInputElement>(null);
 
   function exportData() {
-    const data = JSON.stringify({ people, interactions, followUps, events }, null, 2);
+    const data = JSON.stringify({ people, interactions, followUps, events, documents }, null, 2);
     const url = URL.createObjectURL(new Blob([data], { type: "application/json" }));
     const link = document.createElement("a");
     link.href = url;
@@ -143,7 +143,7 @@ export function DataControls({ compact = false }: { compact?: boolean }) {
         } else {
           const parsed = JSON.parse(text) as NetworkData;
           if (!Array.isArray(parsed.people) || !Array.isArray(parsed.events)) throw new Error();
-          importData(parsed);
+          importData({ ...parsed, documents: parsed.documents || [] });
         }
       } catch (error) {
         alert(error instanceof Error ? error.message : "That file is not a valid Network OS backup or Google Contacts CSV.");

@@ -5,11 +5,11 @@ import { User } from "@supabase/supabase-js";
 import { emptyData, removeLegacySampleData } from "@/data/initial-data";
 import { AuthScreen } from "@/components/auth-screen";
 import {
-  eventRow, followUpRow, interactionRow, loadNetworkData, personRow,
+  commercialDocumentRow, eventRow, followUpRow, interactionRow, loadNetworkData, personRow,
   remapLocalData, replaceNetworkData, uploadDataImage,
 } from "@/lib/network-repository";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
-import { FollowUp, Interaction, NetworkData, NetworkEvent, Person, PersonInput } from "@/types";
+import { CommercialDocument, FollowUp, Interaction, NetworkData, NetworkEvent, Person, PersonInput } from "@/types";
 
 const STORAGE_KEY = "network-os-data-v1";
 const SAMPLE_CLEANUP_KEY = "network-os-sample-cleanup-v1";
@@ -31,6 +31,8 @@ interface AppContextValue extends NetworkData {
   addInteraction: (input: Omit<Interaction, "id">) => void;
   saveFollowUp: (input: Omit<FollowUp, "id"> & { id?: string }) => void;
   saveEvent: (input: Omit<NetworkEvent, "id"> & { id?: string }) => string;
+  saveDocument: (input: Omit<CommercialDocument, "id"> & { id?: string }) => string;
+  deleteDocument: (id: string) => void;
   importData: (data: NetworkData) => void;
   clearData: () => void;
   signOut: () => void;
@@ -43,7 +45,8 @@ function localData() {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return emptyData;
     const parsed = JSON.parse(stored) as NetworkData;
-    return !localStorage.getItem(SAMPLE_CLEANUP_KEY) ? removeLegacySampleData(parsed) : parsed;
+    const migrated = { ...emptyData, ...parsed, documents: parsed.documents || [] };
+    return !localStorage.getItem(SAMPLE_CLEANUP_KEY) ? removeLegacySampleData(migrated) : migrated;
   } catch {
     return emptyData;
   }
@@ -229,6 +232,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       })().catch(report);
       return event.id;
+    },
+    saveDocument: (input) => {
+      const document = { ...input, id: input.id || crypto.randomUUID() };
+      setData((current) => ({
+        ...current,
+        documents: current.documents.some((item) => item.id === document.id)
+          ? current.documents.map((item) => item.id === document.id ? document : item)
+          : [document, ...current.documents],
+      }));
+      void (async () => {
+        if (!supabase) return;
+        const { error } = await supabase.from("commercial_documents").upsert(commercialDocumentRow(document));
+        if (error) throw error;
+        await supabase.from("commercial_document_people").delete().eq("document_id", document.id);
+        if (document.personIds.length) {
+          const { error: linkError } = await supabase.from("commercial_document_people").insert(
+            document.personIds.map((personId) => ({ document_id: document.id, person_id: personId })),
+          );
+          if (linkError) throw linkError;
+        }
+      })().catch(report);
+      return document.id;
+    },
+    deleteDocument: (id) => {
+      setData((current) => ({ ...current, documents: current.documents.filter((document) => document.id !== id) }));
+      if (supabase) void supabase.from("commercial_documents").delete().eq("id", id).then(({ error }) => { if (error) report(error); });
     },
     importData: (imported) => {
       const migrated = remapLocalData(imported);

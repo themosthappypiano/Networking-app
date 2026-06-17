@@ -5,6 +5,7 @@ export const emptyData: NetworkData = {
   interactions: [],
   followUps: [],
   events: [],
+  documents: [],
 };
 
 const legacyPersonIds = new Set([
@@ -34,6 +35,10 @@ export function removeLegacySampleData(data: NetworkData): NetworkData {
       })),
     interactions: data.interactions.filter((interaction) => !legacyPersonIds.has(interaction.personId)),
     followUps: data.followUps.filter((followUp) => !legacyPersonIds.has(followUp.personId)),
+    documents: (data.documents || []).map((document) => ({
+      ...document,
+      personIds: document.personIds.filter((id) => !legacyPersonIds.has(id)),
+    })),
     events: data.events
       .filter((event) => !legacyEventIds.has(event.id))
       .map((event) => ({

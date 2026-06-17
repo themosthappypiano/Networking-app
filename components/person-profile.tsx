@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bot, CalendarClock, Edit3, ImagePlus, Link2, MapPin, MessageSquareText, Plus, Trash2, UserRound } from "lucide-react";
+import { ArrowLeft, Bot, CalendarClock, Edit3, ImagePlus, Link2, MapPin, MessageSquareText, Plus, ReceiptText, Trash2, UserRound } from "lucide-react";
 import { useState } from "react";
 import { useNetwork } from "@/components/app-provider";
 import { AISummaryBox } from "@/components/ai-summary-box";
@@ -10,9 +10,11 @@ import { FollowUpForm } from "@/components/follow-up-form";
 import { FollowUpList } from "@/components/follow-up-list";
 import { InteractionForm } from "@/components/interaction-form";
 import { InteractionTimeline } from "@/components/interaction-timeline";
+import { CommercialDocumentCard } from "@/components/commercial-document-card";
+import { CommercialDocumentForm } from "@/components/commercial-document-form";
 import { PersonForm } from "@/components/person-form";
 import { Avatar, Badge, ContextMeter, EmptyState, FocusBadge, Modal, SectionHeading } from "@/components/ui";
-import { FollowUp } from "@/types";
+import { CommercialDocument, FollowUp } from "@/types";
 import { formatDate } from "@/utils";
 
 const tabs = [
@@ -20,6 +22,7 @@ const tabs = [
   { id: "context", label: "Context", icon: Bot },
   { id: "interactions", label: "Interactions", icon: MessageSquareText },
   { id: "actions", label: "Follow-ups", icon: CalendarClock },
+  { id: "documents", label: "Invoices", icon: ReceiptText },
   { id: "connections", label: "Connections", icon: Link2 },
   { id: "ai", label: "AI Summary", icon: Bot },
 ] as const;
@@ -28,17 +31,20 @@ type Tab = (typeof tabs)[number]["id"];
 
 export function PersonProfile({ personId }: { personId: string }) {
   const router = useRouter();
-  const { people, interactions, followUps, events, deletePerson } = useNetwork();
+  const { people, interactions, followUps, events, documents, deletePerson } = useNetwork();
   const person = people.find((item) => item.id === personId);
   const [tab, setTab] = useState<Tab>("overview");
   const [editOpen, setEditOpen] = useState(false);
   const [interactionOpen, setInteractionOpen] = useState(false);
   const [actionOpen, setActionOpen] = useState(false);
+  const [documentOpen, setDocumentOpen] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<CommercialDocument>();
   const [editingAction, setEditingAction] = useState<FollowUp>();
 
   if (!person) return <EmptyState icon={<UserRound size={20} />} title="Person not found" body="This contact may have been removed or the link is invalid." action={<Link href="/people" className="button-secondary">Back to people</Link>} />;
   const personInteractions = interactions.filter((item) => item.personId === person.id);
   const personFollowUps = followUps.filter((item) => item.personId === person.id);
+  const personDocuments = documents.filter((item) => item.personIds.includes(person.id));
   const connected = people.filter((item) => person.connectedPeopleIds.includes(item.id));
   const sharedEvents = events.filter((event) => person.eventIds.includes(event.id));
   const personName = person.name;
@@ -107,6 +113,12 @@ export function PersonProfile({ personId }: { personId: string }) {
         )}
         {tab === "interactions" && <section><SectionHeading eyebrow="Conversation memory" title={`${personInteractions.length} interactions`} action={<button onClick={() => setInteractionOpen(true)} className="button-primary"><Plus size={15} /> Add interaction</button>} /><InteractionTimeline interactions={personInteractions} /></section>}
         {tab === "actions" && <section><SectionHeading eyebrow="Keep momentum" title="Follow-up actions" action={<button onClick={() => { setEditingAction(undefined); setActionOpen(true); }} className="button-primary"><Plus size={15} /> Add action</button>} /><FollowUpList followUps={personFollowUps} onEdit={(item) => { setEditingAction(item); setActionOpen(true); }} /></section>}
+        {tab === "documents" && (
+          <section>
+            <SectionHeading eyebrow="Commercial memory" title="Invoices & proposals" action={<button onClick={() => { setEditingDocument(undefined); setDocumentOpen(true); }} className="button-primary"><Plus size={15} /> Add document</button>} />
+            {personDocuments.length ? <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{personDocuments.map((document) => <CommercialDocumentCard key={document.id} document={document} people={people} onEdit={() => { setEditingDocument(document); setDocumentOpen(true); }} />)}</div> : <EmptyState icon={<ReceiptText size={18} />} title="No documents sent" body="Add invoices or proposals tied to this person to track the commercial relationship." />}
+          </section>
+        )}
         {tab === "connections" && (
           <div className="grid gap-6 xl:grid-cols-2">
             <section className="card p-5 sm:p-6"><SectionHeading eyebrow="Origin" title="How you are connected" /><Info label="How we met" value={person.howWeMet} /><div className="my-5 border-t border-line" /><Info label="Introduced by" value={person.introducedBy || "Direct connection"} /></section>
@@ -120,6 +132,7 @@ export function PersonProfile({ personId }: { personId: string }) {
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title={`Edit ${person.name}`} wide><PersonForm person={person} onDone={() => setEditOpen(false)} /></Modal>
       <Modal open={interactionOpen} onClose={() => setInteractionOpen(false)} title="Add interaction" description={`Log a conversation with ${person.name}.`}><InteractionForm personId={person.id} onDone={() => setInteractionOpen(false)} /></Modal>
       <Modal open={actionOpen} onClose={() => setActionOpen(false)} title={editingAction ? "Edit follow-up" : "Add follow-up action"}><FollowUpForm personId={person.id} followUp={editingAction} onDone={() => setActionOpen(false)} /></Modal>
+      <Modal open={documentOpen} onClose={() => setDocumentOpen(false)} title={editingDocument ? `Edit ${editingDocument.title}` : "Add invoice or proposal"} wide><CommercialDocumentForm document={editingDocument ? editingDocument : undefined} defaultPersonId={person.id} onDone={() => setDocumentOpen(false)} /></Modal>
     </>
   );
 }

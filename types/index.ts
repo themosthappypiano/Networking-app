@@ -33,6 +33,8 @@ export type RelationshipStatus = (typeof RELATIONSHIP_STATUSES)[number];
 export type InteractionType = (typeof INTERACTION_TYPES)[number];
 export type Priority = "Low" | "Medium" | "High";
 export type ActionStatus = "Todo" | "In progress" | "Done";
+export type CommercialDocumentType = "Invoice" | "Proposal";
+export type CommercialDocumentStatus = "Draft" | "Sent" | "Viewed" | "Accepted" | "Declined" | "Paid";
 
 export interface PersonContext {
   summary: string;
@@ -109,11 +111,27 @@ export interface NetworkEvent {
   outcomes: string;
 }
 
+export interface CommercialDocument {
+  id: string;
+  type: CommercialDocumentType;
+  title: string;
+  amount: number;
+  currency: string;
+  status: CommercialDocumentStatus;
+  sentDate: string;
+  dueDate: string;
+  personIds: string[];
+  tags: string[];
+  notes: string;
+  link: string;
+}
+
 export interface NetworkData {
   people: Person[];
   interactions: Interaction[];
   followUps: FollowUp[];
   events: NetworkEvent[];
+  documents: CommercialDocument[];
 }
 
 export type PersonInput = Omit<
