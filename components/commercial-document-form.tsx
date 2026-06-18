@@ -10,7 +10,7 @@ const statuses: CommercialDocumentStatus[] = ["Draft", "Sent", "Viewed", "Accept
 const types: CommercialDocumentType[] = ["Proposal", "Invoice"];
 
 export function CommercialDocumentForm({ document, defaultPersonId, onDone }: { document?: CommercialDocument; defaultPersonId?: string; onDone: () => void }) {
-  const { people, saveDocument } = useNetwork();
+  const { deleteDocument, people, saveDocument } = useNetwork();
   const [tags, setTags] = useState(document?.tags.join(", ") || "");
   const [personSearch, setPersonSearch] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
@@ -40,6 +40,12 @@ export function CommercialDocumentForm({ document, defaultPersonId, onDone }: { 
   function submit(event: FormEvent) {
     event.preventDefault();
     saveDocument({ ...form, tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean) });
+    onDone();
+  }
+
+  function remove() {
+    if (!document?.id) return;
+    deleteDocument(document.id);
     onDone();
   }
 
@@ -165,7 +171,11 @@ export function CommercialDocumentForm({ document, defaultPersonId, onDone }: { 
         </div>
       </div>
       <label><span className="label">Notes</span><textarea className="textarea" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Scope, terms, follow-up plan, objections..." /></label>
-      <div className="flex justify-end gap-3 pt-3"><button type="button" onClick={onDone} className="button-secondary">Cancel</button><button className="button-primary">{document ? "Save changes" : "Add document"}</button></div>
+      <div className="flex flex-wrap justify-end gap-3 pt-3">
+        {document?.id && <button type="button" onClick={remove} className="mr-auto rounded-xl border border-red-400/20 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50">Delete document</button>}
+        <button type="button" onClick={onDone} className="button-secondary">Cancel</button>
+        <button className="button-primary">{document ? "Save changes" : "Add document"}</button>
+      </div>
     </form>
   );
 }
