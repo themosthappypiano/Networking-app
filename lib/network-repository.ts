@@ -27,7 +27,12 @@ async function imageUrls(client: SupabaseClient, values: string[] | null) {
 }
 
 function isMissingTable(error: unknown) {
-  return Boolean(error && typeof error === "object" && "code" in error && error.code === "42P01");
+  return Boolean(
+    error
+    && typeof error === "object"
+    && "code" in error
+    && (error.code === "42P01" || error.code === "PGRST205"),
+  );
 }
 
 export async function uploadDataImage(client: SupabaseClient, userId: string, bucket: "avatars" | "banners", value?: string) {

@@ -1,5 +1,3 @@
-import { FocusArea } from "@/types";
-
 export function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
@@ -25,7 +23,7 @@ export function isDue(date?: string) {
   return new Date(`${date}T00:00:00`) <= today;
 }
 
-export const focusStyles: Record<FocusArea, string> = {
+export const focusStyles: Record<string, string> = {
   Attract: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200",
   Convert: "bg-orange-50 text-orange-700 border-orange-200",
   Deliver: "bg-cyan-50 text-cyan-700 border-cyan-200",

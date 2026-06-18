@@ -30,6 +30,7 @@ interface AppContextValue extends NetworkData {
   deletePerson: (id: string) => void;
   addInteraction: (input: Omit<Interaction, "id">) => void;
   saveFollowUp: (input: Omit<FollowUp, "id"> & { id?: string }) => void;
+  deleteFollowUp: (id: string) => void;
   saveEvent: (input: Omit<NetworkEvent, "id"> & { id?: string }) => string;
   saveDocument: (input: Omit<CommercialDocument, "id"> & { id?: string }) => string;
   deleteDocument: (id: string) => void;
@@ -210,6 +211,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return { ...current, followUps: exists ? current.followUps.map((item) => item.id === followUp.id ? followUp : item) : [followUp, ...current.followUps] };
       });
       if (supabase) void supabase.from("follow_ups").upsert(followUpRow(followUp)).then(({ error }) => { if (error) report(error); });
+    },
+    deleteFollowUp: (id) => {
+      setData((current) => ({ ...current, followUps: current.followUps.filter((item) => item.id !== id) }));
+      if (supabase) void supabase.from("follow_ups").delete().eq("id", id).then(({ error }) => { if (error) report(error); });
     },
     saveEvent: (input) => {
       const event = { ...input, id: input.id || crypto.randomUUID() };

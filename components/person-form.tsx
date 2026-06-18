@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useState } from "react";
-import { Camera, CheckCircle2, ImagePlus, Linkedin, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { Camera, CheckCircle2, ImagePlus, Linkedin, Loader2, Search, Sparkles, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useNetwork } from "@/components/app-provider";
 import { emptyContext } from "@/utils";
@@ -35,7 +35,12 @@ export function PersonForm({ person, onDone }: { person?: Person; onDone: () => 
   const { people, savePerson } = useNetwork();
   const router = useRouter();
   const [form, setForm] = useState<PersonInput>(person
-    ? { ...person, galleryUrls: person.galleryUrls || [], context: { ...emptyContext, ...person.context } }
+    ? {
+      ...person,
+      focusArea: FOCUS_AREAS.includes(person.focusArea as never) ? person.focusArea : "Other",
+      galleryUrls: person.galleryUrls || [],
+      context: { ...emptyContext, ...person.context },
+    }
     : defaultPerson);
   const [tags, setTags] = useState(person?.tags.join(", ") || "");
   const [photoError, setPhotoError] = useState("");
@@ -45,6 +50,7 @@ export function PersonForm({ person, onDone }: { person?: Person; onDone: () => 
   const [importing, setImporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [connectionSearch, setConnectionSearch] = useState("");
 
   function update<K extends keyof PersonInput>(key: K, value: PersonInput[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -265,8 +271,22 @@ export function PersonForm({ person, onDone }: { person?: Person; onDone: () => 
           <div className="mt-4 rounded-2xl border border-line bg-slate-50 p-4">
             <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-lime">Relationship graph</p>
             <p className="mb-3 text-sm text-slate-500">Connect this person to other people in your network.</p>
+            <label className="relative mb-3 block">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                className="input h-10 bg-white pl-9 text-sm"
+                value={connectionSearch}
+                onChange={(event) => setConnectionSearch(event.target.value)}
+                placeholder="Search people to connect..."
+              />
+            </label>
             <div className="grid max-h-56 gap-2 overflow-y-auto sm:grid-cols-2">
-              {people.filter((candidate) => candidate.id !== person.id).map((candidate) => {
+              {people.filter((candidate) => {
+                if (candidate.id === person.id) return false;
+                const query = connectionSearch.trim().toLowerCase();
+                if (!query) return true;
+                return `${candidate.name} ${candidate.role} ${candidate.business} ${candidate.community} ${candidate.tags.join(" ")}`.toLowerCase().includes(query);
+              }).map((candidate) => {
                 const checked = (form.connectedPeopleIds || []).includes(candidate.id);
                 return (
                   <label key={candidate.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-sm transition ${checked ? "border-lime/40 bg-lime/10 text-slate-950" : "border-line bg-[#fbfdf7] text-slate-600 hover:border-slate-300"}`}>

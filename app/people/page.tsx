@@ -8,16 +8,18 @@ import { FilterBar, Filters, emptyFilters } from "@/components/filter-bar";
 import { PersonCard } from "@/components/person-card";
 import { EmptyState, Modal } from "@/components/ui";
 import { PersonForm } from "@/components/person-form";
-import { isDue } from "@/utils";
+import { Person } from "@/types";
 
 export default function PeoplePage() {
-  const { people, events } = useNetwork();
+  const { people, events, followUps } = useNetwork();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [recentOnly, setRecentOnly] = useState(false);
   const [minContext, setMinContext] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
+  const [editingPerson, setEditingPerson] = useState<Person>();
   const communities = Array.from(new Set(people.map((person) => person.community).filter(Boolean))).sort();
   const tags = Array.from(new Set(people.flatMap((person) => person.tags))).sort();
+  const openFollowUpPersonIds = new Set(followUps.filter((item) => item.status !== "Done").map((item) => item.personId));
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -44,8 +46,8 @@ export default function PeoplePage() {
       && (!filters.event || person.eventIds.includes(filters.event))
       && (!filters.tag || person.tags.includes(filters.tag))
       && (!recentOnly || Boolean(person.lastInteractionDate) && new Date(`${person.lastInteractionDate}T12:00:00`) >= recentCutoff)
-      && (!filters.needsFollowUp || person.relationshipStatus === "Needs follow-up" || isDue(person.nextFollowUpDate));
-  }), [people, filters, minContext, recentOnly]);
+      && (!filters.needsFollowUp || openFollowUpPersonIds.has(person.id));
+  }), [people, filters, minContext, recentOnly, openFollowUpPersonIds]);
 
   return (
     <>
@@ -64,8 +66,9 @@ export default function PeoplePage() {
       )}
       <FilterBar filters={filters} setFilters={setFilters} communities={communities} events={events} tags={tags} />
       <div className="h-5" />
-      {filtered.length ? <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-4">{filtered.map((person) => <PersonCard key={person.id} person={person} />)}</div> : <EmptyState icon={<UserSearch size={19} />} title="No people yet" body="Import your Google Contacts CSV or add a person manually to begin building your network." action={<div className="flex flex-wrap justify-center gap-2"><DataControls /><button onClick={() => setAddOpen(true)} className="button-primary"><Plus size={15} /> Add first person</button></div>} />}
+      {filtered.length ? <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-4">{filtered.map((person) => <PersonCard key={person.id} person={person} needsFollowUp={openFollowUpPersonIds.has(person.id)} onEdit={(item) => setEditingPerson(item)} />)}</div> : <EmptyState icon={<UserSearch size={19} />} title="No people yet" body="Import your Google Contacts CSV or add a person manually to begin building your network." action={<div className="flex flex-wrap justify-center gap-2"><DataControls /><button onClick={() => setAddOpen(true)} className="button-primary"><Plus size={15} /> Add first person</button></div>} />}
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add a person" description="Capture the relationship while the context is fresh." wide><PersonForm onDone={() => setAddOpen(false)} /></Modal>
+      <Modal open={Boolean(editingPerson)} onClose={() => setEditingPerson(undefined)} title={editingPerson ? `Edit ${editingPerson.name}` : "Edit person"} wide><PersonForm person={editingPerson} onDone={() => setEditingPerson(undefined)} /></Modal>
     </>
   );
 }

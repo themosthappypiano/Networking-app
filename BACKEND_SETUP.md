@@ -7,9 +7,14 @@
 3. Copy `.env.example` to `.env.local` and add the project URL and keys.
 4. Keep `SUPABASE_SERVICE_ROLE_KEY` server-only. Never prefix it with `NEXT_PUBLIC_`.
 
-The migration creates Auth-owned people, interactions, follow-ups, events, connections,
-LinkedIn import audit records, RLS policies, and private `avatars` and `banners` buckets.
+The migration creates Auth-owned people, interactions, follow-ups, events, commercial
+documents, connections, LinkedIn import audit records, RLS policies, and private `avatars`
+and `banners` buckets.
 Store image objects under `{auth_user_id}/{file_name}` so the storage policies apply.
+
+If the browser console shows `PGRST205` for `public.commercial_documents`, the app is
+connected to a Supabase project that has not run the latest `supabase/schema.sql`. Run the
+SQL file again in Supabase SQL editor so PostgREST can see the commercial document tables.
 
 ## Apify LinkedIn import
 

@@ -71,3 +71,94 @@ body {
     @apply inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-line bg-[#fbfdf7] px-4 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-[#f2f7e8] hover:text-slate-950;
   }
 }
+
+@keyframes connection-line-breathe {
+  0%, 100% {
+    opacity: 0.42;
+  }
+  50% {
+    opacity: 0.82;
+  }
+}
+
+@keyframes connection-node-breathe {
+  0%, 100% {
+    box-shadow: 0 0 18px rgba(132, 204, 22, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 34px rgba(132, 204, 22, 0.34);
+  }
+}
+
+@keyframes connection-node-float {
+  0%, 100% {
+    transform: translate3d(0, -2px, 0);
+  }
+  25% {
+    transform: translate3d(3px, 2px, 0);
+  }
+  50% {
+    transform: translate3d(0, 4px, 0);
+  }
+  75% {
+    transform: translate3d(-3px, 1px, 0);
+  }
+}
+
+@keyframes connection-node-ripple {
+  0% {
+    box-shadow: 0 0 0 0 rgba(132, 204, 22, 0.36), 0 0 28px rgba(132, 204, 22, 0.38);
+  }
+  70% {
+    box-shadow: 0 0 0 18px rgba(132, 204, 22, 0), 0 0 44px rgba(132, 204, 22, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(132, 204, 22, 0), 0 0 28px rgba(132, 204, 22, 0.38);
+  }
+}
+
+@keyframes connection-dot-drift {
+  0%, 100% {
+    opacity: 0.16;
+    transform: translate3d(0, 0, 0) scale(0.85);
+  }
+  50% {
+    opacity: 0.48;
+    transform: translate3d(6px, -8px, 0) scale(1.15);
+  }
+}
+
+.connection-line {
+  animation: connection-line-breathe 3.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 5px rgba(132, 204, 22, 0.26));
+}
+
+.connection-node-core {
+  animation: connection-node-breathe 4.4s ease-in-out infinite;
+}
+
+.connection-node-float {
+  animation: connection-node-float 7.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+.connection-node:nth-of-type(2n) .connection-node-float {
+  animation-delay: -1.8s;
+}
+
+.connection-node:nth-of-type(3n) .connection-node-float {
+  animation-delay: -3.2s;
+}
+
+.connection-node.is-dragging .connection-node-float {
+  animation-play-state: paused;
+}
+
+.connection-node.is-dragging .connection-node-core {
+  animation: connection-node-ripple 1.1s ease-out infinite;
+  border-color: rgba(132, 204, 22, 0.78);
+}
+
+.connection-ambient-dot {
+  animation: connection-dot-drift 5.5s ease-in-out infinite;
+}

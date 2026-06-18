@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Cloud, LayoutDashboard, LogOut, Menu, Network, ReceiptText, Search, Users, X } from "lucide-react";
+import { CalendarDays, Cloud, LayoutDashboard, Link2, LogOut, Menu, Network, ReceiptText, Search, Users, X } from "lucide-react";
 import { ReactNode, useState } from "react";
 import { cn } from "@/utils";
 import { DataControls } from "@/components/data-controls";
@@ -12,6 +12,7 @@ import { AiNetworkChat } from "@/components/ai-network-chat";
 const navigation = [
   { href: "/", label: "Command centre", icon: LayoutDashboard },
   { href: "/people", label: "People", icon: Users },
+  { href: "/connections", label: "Connections", icon: Link2 },
   { href: "/invoices", label: "Invoices", icon: ReceiptText },
   { href: "/events", label: "Events", icon: CalendarDays },
 ];

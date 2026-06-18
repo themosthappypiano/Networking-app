@@ -16,28 +16,13 @@ export default function DashboardPage() {
   const [query, setQuery] = useState("");
   const recentInteractions = [...interactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
   const openFollowUps = followUps.filter((item) => item.status !== "Done");
-  const peopleWithFollowUpRecords = new Set(openFollowUps.map((item) => item.personId));
-  const upcoming = [
-    ...openFollowUps.map((item) => ({ ...item, href: `/people/${item.personId}` })),
-    ...people
-      .filter((person) => !peopleWithFollowUpRecords.has(person.id) && (person.relationshipStatus === "Needs follow-up" || person.nextFollowUpDate))
-      .map((person) => ({
-        id: `person-${person.id}`,
-        personId: person.id,
-        title: person.notes.toLowerCase().includes("follow") ? person.notes : "Follow up",
-        dueDate: person.nextFollowUpDate,
-        priority: "Medium",
-        href: `/people/${person.id}`,
-      })),
-  ].sort((a, b) => (a.dueDate || "9999-12-31").localeCompare(b.dueDate || "9999-12-31")).slice(0, 5);
+  const upcoming = openFollowUps.map((item) => ({ ...item, href: `/people/${item.personId}` }))
+    .sort((a, b) => (a.dueDate || "9999-12-31").localeCompare(b.dueDate || "9999-12-31"))
+    .slice(0, 5);
   const important = [...people].sort((a, b) => b.contextLevel - a.contextLevel || b.lastInteractionDate.localeCompare(a.lastInteractionDate)).slice(0, 4);
   const matches = useMemo(() => query.trim() ? people.filter((person) => `${person.name} ${person.role} ${person.business} ${person.community} ${person.tags.join(" ")}`.toLowerCase().includes(query.toLowerCase())).slice(0, 6) : [], [people, query]);
   const recentCount = interactions.filter((item) => new Date(item.date) >= new Date(Date.now() - 30 * 864e5)).length;
-  const duePeople = new Set(openFollowUps.map((item) => item.personId));
-  people.forEach((person) => {
-    if (person.relationshipStatus === "Needs follow-up" || isDue(person.nextFollowUpDate)) duePeople.add(person.id);
-  });
-  const dueCount = duePeople.size;
+  const dueCount = new Set(openFollowUps.map((item) => item.personId)).size;
 
   return (
     <>

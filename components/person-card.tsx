@@ -1,11 +1,19 @@
 import Link from "next/link";
 import { ArrowUpRight, Camera, Clock3 } from "lucide-react";
 import { Person } from "@/types";
-import { focusStyles, isDue } from "@/utils";
+import { focusStyles } from "@/utils";
 
-export function PersonCard({ person }: { person: Person }) {
+export function PersonCard({ person, needsFollowUp = false, onEdit }: { person: Person; needsFollowUp?: boolean; onEdit?: (person: Person) => void }) {
   return (
-    <Link href={`/people/${person.id}`} className="group block overflow-hidden rounded-xl border border-line bg-panel transition duration-300 hover:-translate-y-1 hover:border-slate-500 hover:shadow-2xl">
+    <Link
+      href={`/people/${person.id}`}
+      onContextMenu={(event) => {
+        if (!onEdit) return;
+        event.preventDefault();
+        onEdit(person);
+      }}
+      className="group block overflow-hidden rounded-xl border border-line bg-panel transition duration-300 hover:-translate-y-1 hover:border-slate-500 hover:shadow-2xl"
+    >
       <div className={`relative aspect-square overflow-hidden bg-gradient-to-br ${person.avatarColor}`}>
         {person.avatarUrl ? (
           <img src={person.avatarUrl} alt={person.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
@@ -28,7 +36,7 @@ export function PersonCard({ person }: { person: Person }) {
           </div>
           <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-950/45">L{person.contextLevel}</span>
         </div>
-        {(person.community || isDue(person.nextFollowUpDate)) && <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-slate-950/45"><span className="truncate">{person.community}</span>{isDue(person.nextFollowUpDate) && <span className="flex shrink-0 items-center gap-1 text-orange-700"><Clock3 size={11} /> Follow up</span>}</div>}
+        {(person.community || needsFollowUp) && <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-slate-950/45"><span className="truncate">{person.community}</span>{needsFollowUp && <span className="flex shrink-0 items-center gap-1 text-orange-700"><Clock3 size={11} /> Follow up</span>}</div>}
       </div>
     </Link>
   );

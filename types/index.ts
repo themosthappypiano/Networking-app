@@ -1,8 +1,6 @@
 export const FOCUS_AREAS = [
-  "Attract",
   "Convert",
   "Deliver",
-  "Operations",
   "Partnerships",
   "Investor",
   "Friend",

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bot, CalendarClock, Edit3, ImagePlus, Link2, MapPin, MessageSquareText, Plus, ReceiptText, Trash2, UserRound } from "lucide-react";
+import { ArrowLeft, Bot, CalendarClock, Edit3, ImagePlus, Link2, MapPin, MessageSquareText, Plus, ReceiptText, Search, Trash2, UserRound } from "lucide-react";
 import { useState } from "react";
 import { useNetwork } from "@/components/app-provider";
 import { AISummaryBox } from "@/components/ai-summary-box";
@@ -40,12 +40,21 @@ export function PersonProfile({ personId }: { personId: string }) {
   const [documentOpen, setDocumentOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState<CommercialDocument>();
   const [editingAction, setEditingAction] = useState<FollowUp>();
+  const [graphSearch, setGraphSearch] = useState("");
 
   if (!person) return <EmptyState icon={<UserRound size={20} />} title="Person not found" body="This contact may have been removed or the link is invalid." action={<Link href="/people" className="button-secondary">Back to people</Link>} />;
   const personInteractions = interactions.filter((item) => item.personId === person.id);
   const personFollowUps = followUps.filter((item) => item.personId === person.id);
   const personDocuments = documents.filter((item) => item.personIds.includes(person.id));
   const connected = people.filter((item) => person.connectedPeopleIds.includes(item.id));
+  const incoming = people.filter((item) => item.connectedPeopleIds.includes(person.id) && !person.connectedPeopleIds.includes(item.id));
+  const visibleGraphPeople = [...connected, ...incoming].slice(0, 10);
+  const graphQuery = graphSearch.trim().toLowerCase();
+  const graphMatches = people.filter((item) => {
+    if (item.id === person.id) return false;
+    if (!graphQuery) return person.connectedPeopleIds.includes(item.id) || item.connectedPeopleIds.includes(person.id);
+    return `${item.name} ${item.role} ${item.business} ${item.community} ${item.tags.join(" ")}`.toLowerCase().includes(graphQuery);
+  }).slice(0, 8);
   const sharedEvents = events.filter((event) => person.eventIds.includes(event.id));
   const personName = person.name;
   const activePersonId = person.id;
@@ -64,7 +73,18 @@ export function PersonProfile({ personId }: { personId: string }) {
         <div className="px-5 pb-6 pt-6 sm:px-7 sm:pt-7">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-              <div className="w-fit rounded-full border-4 border-white bg-white shadow-md"><Avatar initials={person.initials} color={person.avatarColor} photoUrl={person.avatarUrl} size="2xl" /></div>
+              <button
+                type="button"
+                onClick={() => setEditOpen(true)}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  setEditOpen(true);
+                }}
+                className="w-fit rounded-full border-4 border-white bg-white shadow-md"
+                aria-label="Edit profile photo"
+              >
+                <Avatar initials={person.initials} color={person.avatarColor} photoUrl={person.avatarUrl} size="2xl" />
+              </button>
               <div><h1 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">{person.name}</h1><p className="mt-2 text-sm text-slate-600">{person.role}{person.business && ` at ${person.business}`}</p><p className="mt-3 flex items-center gap-1.5 text-xs text-slate-600"><MapPin size={12} />{person.location} · {person.community}</p></div>
             </div>
             <div className="flex gap-2"><button onClick={() => setEditOpen(true)} className="button-secondary"><Edit3 size={15} /> Edit</button><button onClick={remove} className="grid h-10 w-10 place-items-center rounded-xl border border-red-400/15 text-slate-600 transition hover:bg-red-400/10 hover:text-red-700"><Trash2 size={15} /></button></div>
@@ -88,7 +108,16 @@ export function PersonProfile({ personId }: { personId: string }) {
                 {(person.galleryUrls || []).length ? (
                   <div className="grid grid-cols-2 gap-3">
                     {(person.galleryUrls || []).map((url, index) => (
-                      <button key={`${url}-${index}`} onClick={() => setEditOpen(true)} className="group aspect-square overflow-hidden rounded-xl border border-line bg-slate-100 text-left">
+                      <button
+                        key={`${url}-${index}`}
+                        onClick={() => setEditOpen(true)}
+                        onContextMenu={(event) => {
+                          event.preventDefault();
+                          setEditOpen(true);
+                        }}
+                        className="group aspect-square overflow-hidden rounded-xl border border-line bg-slate-100 text-left"
+                        aria-label={`Edit ${person.name} photo ${index + 1}`}
+                      >
                         <img src={url} alt={`${person.name} photo ${index + 1}`} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
                       </button>
                     ))}
@@ -120,10 +149,88 @@ export function PersonProfile({ personId }: { personId: string }) {
           </section>
         )}
         {tab === "connections" && (
-          <div className="grid gap-6 xl:grid-cols-2">
+          <div className="space-y-6">
+            <section className="grid overflow-hidden rounded-2xl border border-line bg-[#101510] shadow-glow xl:grid-cols-[1.15fr_.85fr]">
+              <div className="relative min-h-[360px] border-b border-white/10 bg-[radial-gradient(circle_at_center,rgba(132,204,22,0.16),transparent_52%)] xl:border-b-0 xl:border-r">
+                <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:28px_28px]" />
+                {visibleGraphPeople.map((item, index) => {
+                  const count = Math.max(visibleGraphPeople.length, 1);
+                  const angle = -90 + (index * 360) / count;
+                  return (
+                    <div
+                      key={`line-${item.id}`}
+                      className="absolute left-1/2 top-1/2 h-px origin-left bg-lime/35"
+                      style={{ width: "31%", transform: `rotate(${angle}deg)` }}
+                    />
+                  );
+                })}
+                <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+                  <div className="rounded-full border border-lime/40 bg-[#f8fbf0] p-1 shadow-[0_0_32px_rgba(132,204,22,0.32)]">
+                    <Avatar initials={person.initials} color={person.avatarColor} photoUrl={person.avatarUrl} size="xl" />
+                  </div>
+                  <p className="mt-3 max-w-36 truncate text-center text-xs font-semibold text-white">{person.name}</p>
+                </div>
+                {visibleGraphPeople.map((item, index) => {
+                  const count = Math.max(visibleGraphPeople.length, 1);
+                  const angle = (-90 + (index * 360) / count) * (Math.PI / 180);
+                  const left = 50 + Math.cos(angle) * 34;
+                  const top = 50 + Math.sin(angle) * 34;
+                  const isIncoming = incoming.some((candidate) => candidate.id === item.id);
+                  return (
+                    <Link
+                      key={item.id}
+                      href={`/people/${item.id}`}
+                      className="absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center"
+                      style={{ left: `${left}%`, top: `${top}%` }}
+                    >
+                      <span className="rounded-full border border-lime/30 bg-[#f8fbf0] p-1 shadow-[0_0_24px_rgba(132,204,22,0.22)] transition hover:border-lime/70">
+                        <Avatar initials={item.initials} color={item.avatarColor} photoUrl={item.avatarUrl} size="lg" />
+                      </span>
+                      <span className="mt-2 block w-24 truncate text-[11px] font-medium text-white">{item.name}</span>
+                      {isIncoming && <span className="mt-1 block text-[10px] text-lime">links to you</span>}
+                    </Link>
+                  );
+                })}
+                {!visibleGraphPeople.length && (
+                  <div className="absolute inset-0 z-10 grid place-items-center p-8 text-center">
+                    <div>
+                      <Link2 size={30} className="mx-auto text-lime" />
+                      <p className="mt-3 text-sm font-medium text-white">No graph links yet</p>
+                      <p className="mt-1 text-xs leading-5 text-white/60">Edit this profile and connect people to build the graph.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="bg-[#f8fbf0] p-5 sm:p-6">
+                <SectionHeading eyebrow="Graph search" title="Find linked people" action={<button onClick={() => setEditOpen(true)} className="button-secondary"><Edit3 size={15} /> Edit links</button>} />
+                <label className="relative block">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input className="input h-11 bg-white pl-10" value={graphSearch} onChange={(event) => setGraphSearch(event.target.value)} placeholder="Search this network..." />
+                </label>
+                <div className="mt-4 space-y-2">
+                  {graphMatches.map((item) => {
+                    const direct = person.connectedPeopleIds.includes(item.id);
+                    const reverse = item.connectedPeopleIds.includes(person.id);
+                    return (
+                      <Link href={`/people/${item.id}`} key={item.id} className="flex items-center gap-3 rounded-xl border border-line bg-white p-3 transition hover:border-slate-300">
+                        <Avatar initials={item.initials} color={item.avatarColor} photoUrl={item.avatarUrl} size="sm" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-slate-950">{item.name}</span>
+                          <span className="block truncate text-xs text-slate-500">{item.role || item.business || item.community || "Contact"}</span>
+                        </span>
+                        <Badge className={direct ? "border-lime/30 bg-lime/10 text-lime" : reverse ? "border-cyan-300 bg-cyan-50 text-cyan-700" : "border-line bg-slate-50 text-slate-500"}>{direct ? "linked" : reverse ? "incoming" : "match"}</Badge>
+                      </Link>
+                    );
+                  })}
+                  {!graphMatches.length && <p className="rounded-xl border border-dashed border-line bg-white p-4 text-sm text-slate-500">No people match that search.</p>}
+                </div>
+              </div>
+            </section>
+            <div className="grid gap-6 xl:grid-cols-2">
             <section className="card p-5 sm:p-6"><SectionHeading eyebrow="Origin" title="How you are connected" /><Info label="How we met" value={person.howWeMet} /><div className="my-5 border-t border-line" /><Info label="Introduced by" value={person.introducedBy || "Direct connection"} /></section>
             <section className="card p-5 sm:p-6"><SectionHeading eyebrow="Relationship graph" title="Connected people" />{connected.length ? <div className="space-y-2">{connected.map((item) => <Link href={`/people/${item.id}`} key={item.id} className="flex items-center gap-3 rounded-xl p-3 hover:bg-slate-100"><Avatar initials={item.initials} color={item.avatarColor} photoUrl={item.avatarUrl} /><div><p className="text-sm font-medium text-slate-950">{item.name}</p><p className="text-xs text-slate-600">{item.role} · {item.community}</p></div></Link>)}</div> : <p className="text-sm text-slate-500">No connected people recorded yet.</p>}</section>
             <section className="card p-5 sm:p-6 xl:col-span-2"><SectionHeading eyebrow="Shared spaces" title="Communities & events" /><div className="flex flex-wrap gap-3"><Badge className="border-violet-400/20 bg-violet-400/10 px-3 py-2 text-violet-700">{person.community}</Badge>{sharedEvents.map((event) => <Link href={`/events/${event.id}`} key={event.id}><Badge className="border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-cyan-700">{event.name}</Badge></Link>)}</div></section>
+            </div>
           </div>
         )}
         {tab === "ai" && <AISummaryBox person={person} interactions={personInteractions} followUps={personFollowUps} />}
